@@ -77,8 +77,14 @@ def removeOriginsDestinies(origin, destiny):
 def atsp():
     global ECONOMIES_DICTS, VISITED, DIMENSION
     VISITED = []
-    while len(VISITED) != DIMENSION:
-        pass
+    curr_v0 = 0 # start from zero
+    while len(VISITED) < DIMENSION:
+        edge = None
+        curr_v1 = list(ECONOMIES_DICTS[curr_v0].keys())[0]
+        edge = (curr_v0, curr_v1, ECONOMIES_DICTS[curr_v0][curr_v1])
+        removeOriginsDestinies(curr_v0, curr_v1)
+        VISITED.append(edge)
+        curr_v0 = curr_v1
 
 
 def main():
@@ -93,12 +99,14 @@ def main():
                         parseFile('grafos/atsp/br17.atsp')
                         calculateMinPathsOneToAll()
                         calculateEconomies()
-                        removeOriginsDestinies(0,1)
                         print(ECONOMIES_DICTS)
+                        atsp()
+                        print(VISITED)
                     except Exception as e:
                         print(e)
                         PROBLEMS.writelines(file + '\n')
                     break
+    PROBLEMS.close()
 
 
 if __name__ == "__main__":
