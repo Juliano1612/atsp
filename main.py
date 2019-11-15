@@ -9,6 +9,7 @@ DIMENSION = 0
 GRAPH_MATRIX = None
 SHORTEST_PATHS = None
 ECONOMIES_DICTS = None
+VISITED = []
 
 PROBLEMS = open('problems.txt', 'w')
 
@@ -46,20 +47,40 @@ def calculateMinPathsOneToAll():
     SHORTEST_PATHS = ssp.csgraph.bellman_ford(GRAPH_MATRIX, directed=True, return_predecessors=False)
     print(SHORTEST_PATHS)
 
+
 def calculateEconomies():
     global SHORTEST_PATHS, ECONOMIES_DICTS, DIMENSION
-    ECONOMIES_DICTS = []
+    ECONOMIES_DICTS = {}
     for i in range(DIMENSION):
-        for j in range(DIMENSION): 
+        ECONOMIES_DICTS[i] = {}
+        for j in range(DIMENSION):
             if i != j:
                 s = SHORTEST_PATHS[0][i] + SHORTEST_PATHS[0][j] - SHORTEST_PATHS[i][j]
-                ECONOMIES_DICTS.append({
-                    'i': i,
-                    'j': j,
-                    's': s
-                })
-    ECONOMIES_DICTS = sorted(ECONOMIES_DICTS, key=lambda x : x['s'], reverse=True)
-   
+                ECONOMIES_DICTS[i][j] = s
+    for key in ECONOMIES_DICTS.keys():
+        ECONOMIES_DICTS[key] = dict(sorted(
+            ECONOMIES_DICTS[key].items(), key=lambda x : x[1], reverse=True))
+    print("########################################")
+    print(ECONOMIES_DICTS)
+    print("########################################")
+
+
+def removeOriginsDestinies(origin, destiny):
+    global ECONOMIES_DICTS
+    if origin in ECONOMIES_DICTS.keys():
+        ECONOMIES_DICTS.pop(origin)
+    for key in ECONOMIES_DICTS.keys():
+        if destiny in ECONOMIES_DICTS[key].keys():
+            ECONOMIES_DICTS[key].pop(destiny)
+
+
+def atsp():
+    global ECONOMIES_DICTS, VISITED, DIMENSION
+    VISITED = []
+    while len(VISITED) != DIMENSION:
+        pass
+
+
 def main():
     global FOLDER, PROBLEMS
     PROBLEMS.truncate(0)
@@ -72,6 +93,8 @@ def main():
                         parseFile('grafos/atsp/br17.atsp')
                         calculateMinPathsOneToAll()
                         calculateEconomies()
+                        removeOriginsDestinies(0,1)
+                        print(ECONOMIES_DICTS)
                     except Exception as e:
                         print(e)
                         PROBLEMS.writelines(file + '\n')
@@ -80,3 +103,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
