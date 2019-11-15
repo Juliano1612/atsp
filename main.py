@@ -74,7 +74,7 @@ def removeOriginsDestinies(origin, destiny):
             ECONOMIES_DICTS[key].pop(destiny)
 
 
-def atsp():
+def clarkeWright():
     global ECONOMIES_DICTS, VISITED, DIMENSION
     VISITED = []
     curr_v0 = 0 # start from zero
@@ -100,7 +100,7 @@ def main():
                         calculateMinPathsOneToAll()
                         calculateEconomies()
                         print(ECONOMIES_DICTS)
-                        atsp()
+                        clarkeWright()
                         print(VISITED)
                     except Exception as e:
                         print(e)
