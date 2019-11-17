@@ -1,5 +1,8 @@
 import numpy as np
 import os
+import networkx as nx
+import matplotlib.pyplot as plt
+# import pylab
 
 FOLDER = 'grafos'
 EDGE_WEIGHT_TYPE = ''
@@ -150,6 +153,31 @@ def _2opt():
         n += 1
 
 
+def plotGraph(graph, file, label, matrix):
+    global DIMENSION, GRAPH_MATRIX
+    edges = []
+    if(matrix):
+        for i in range(DIMENSION):
+            for j in range(DIMENSION):
+                if(graph[i][j] != np.inf and graph[i][j] != 9999):
+                    edges.append((i,j))
+    else :
+        edges = graph
+
+    G = nx.DiGraph()
+    for edge in edges:
+        G.add_edges_from([edge], weight=GRAPH_MATRIX[edge[0]][edge[1]])
+    edge_labels = dict([((u, v,), d['weight'])
+                        for u, v, d in G.edges(data=True)])
+    red_edges = []
+    edge_colors = ['black' if not edge in red_edges else 'red' for edge in G.edges()]
+    pos=nx.circular_layout(G)
+    nx.draw_networkx_labels(G, pos)
+    # nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels)
+    nx.draw(G, pos, node_size=300, edge_color=edge_colors, edge_cmap=plt.cm.Reds)
+    # plt.savefig('graph_images/%s-%s.png' % (file, label))
+    plt.show()
+
 def main():
     global FOLDER, PROBLEMS
     PROBLEMS.truncate(0)
@@ -161,10 +189,14 @@ def main():
                         initGlobalVariables()
                         parseFile(r+'/'+file)
                         # parseFile('grafos/atsp/br17.atsp')
+                        # plotGraph(GRAPH_MATRIX.copy(), file, 'Complete', True)
                         clarkeWright()
                         print("CLARKE_WRIGHT:",SOLUTIONS[0][1])
+                        plotGraph(CLARKE_SOLUTION.copy(), file, 'ClarkeWright', True)
                         _2opt()
-                        print("2-OPT:", sorted(SOLUTIONS, key=lambda x: x[1])[0][1])
+                        _2opt_answer = sorted(SOLUTIONS, key=lambda x: x[1])[0]
+                        print("2-OPT:", _2opt_answer[1])
+                        plotGraph(_2opt_answer[0].copy(), file, '2Opt', False)
                     except Exception as e:
                         print(e)
                         PROBLEMS.writelines(file + '\n')
