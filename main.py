@@ -1,18 +1,26 @@
 import numpy as np
 import os
-import scipy.sparse as ssp
 
 FOLDER = 'grafos'
 EDGE_WEIGHT_TYPE = ''
 EDGE_WEIGHT_FORMAT = ''
 DIMENSION = 0
 GRAPH_MATRIX = None
-SHORTEST_PATHS = None
-ECONOMIES_DICTS = None
-VISITED = []
+PROBLEMS = open('problems.txt', 'w')
+
+CLARKE_SOLUTION = None
+ECONOMIES_TUPLES = None
 SOLUTIONS = []
 
-PROBLEMS = open('problems.txt', 'w')
+
+def initGlobalVariables():
+    global EDGE_WEIGHT_FORMAT, EDGE_WEIGHT_TYPE, DIMENSION, GRAPH_MATRIX, CLARKE_SOLUTION, ECONOMIES_TUPLES, SOLUTIONS
+    EDGE_WEIGHT_TYPE = ''
+    EDGE_WEIGHT_FORMAT = ''
+    DIMENSION = 0
+    GRAPH_MATRIX = None
+    ECONOMIES_TUPLES = None
+    SOLUTIONS = []
 
 
 def parseFile(path):
@@ -43,67 +51,84 @@ def parseFile(path):
                 tmp_array, dtype=int, sep=' ').reshape((DIMENSION, DIMENSION))
 
 
-def calculateMinPathsOneToAll():
-    global GRAPH_MATRIX, SHORTEST_PATHS
-    SHORTEST_PATHS = ssp.csgraph.bellman_ford(GRAPH_MATRIX, directed=True, return_predecessors=False)
-    # print(SHORTEST_PATHS)
+def buildInitialSolution():
+    global CLARKE_SOLUTION, GRAPH_MATRIX
+    CLARKE_SOLUTION = np.full(GRAPH_MATRIX.shape, np.inf)
+    for i in range(len(CLARKE_SOLUTION)):
+        if i != 0:
+            CLARKE_SOLUTION[0][i] = GRAPH_MATRIX[0][i]
+            CLARKE_SOLUTION[i][0] = GRAPH_MATRIX[i][0]
 
 
 def calculateEconomies():
-    global SHORTEST_PATHS, ECONOMIES_DICTS, DIMENSION
-    ECONOMIES_DICTS = {}
+    global GRAPH_MATRIX, ECONOMIES_TUPLES, DIMENSION
+    ECONOMIES_TUPLES = []
     for i in range(DIMENSION):
-        ECONOMIES_DICTS[i] = {}
         for j in range(DIMENSION):
-            if i != j:
-                s = SHORTEST_PATHS[0][i] + SHORTEST_PATHS[0][j] - SHORTEST_PATHS[i][j]
-                ECONOMIES_DICTS[i][j] = s
-    for key in ECONOMIES_DICTS.keys():
-        ECONOMIES_DICTS[key] = dict(sorted(
-            ECONOMIES_DICTS[key].items(), key=lambda x : x[1], reverse=True))
-    # print("########################################")
-    # print(ECONOMIES_DICTS)
-    # print("########################################")
+            if i == j or i == 0 or j == 0:
+                continue
 
-
-def removeOriginsDestinies(origin, destiny):
-    global ECONOMIES_DICTS
-    if origin in ECONOMIES_DICTS.keys():
-        ECONOMIES_DICTS.pop(origin)
-    for key in ECONOMIES_DICTS.keys():
-        if destiny in ECONOMIES_DICTS[key].keys():
-            ECONOMIES_DICTS[key].pop(destiny)
+            s = GRAPH_MATRIX[0][i] + \
+                GRAPH_MATRIX[0][j] - GRAPH_MATRIX[i][j]
+            ECONOMIES_TUPLES.append(((i, j), s))
+    ECONOMIES_TUPLES = sorted(
+        ECONOMIES_TUPLES, key=lambda x: x[1], reverse=True)
 
 
 def calculatePathSize(path):
     global GRAPH_MATRIX
     pathSize = 0
     for edge in path:
-        # print(edge,GRAPH_MATRIX[edge[0]][edge[1]])
-        if GRAPH_MATRIX[edge[0]][edge[1]] != 0:
-            pathSize += GRAPH_MATRIX[edge[0]][edge[1]]
-        else: 
-            pathSize = 9999
-            break
+        pathSize += GRAPH_MATRIX[edge[0]][edge[1]]
     return pathSize
 
 
+def getPath(solucao, origem, caminho, soma):
+    for destino in range(len(solucao[origem])):
+        if solucao[origem][destino] != np.inf:
+            caminho.insert(len(caminho), (origem, destino))
+            soma = soma + solucao[origem][destino]
+            solucao[origem][destino] = np.inf
+            return getPath(solucao, destino, caminho, soma)
+    return caminho, soma
+
+
+def verifyCycle(new_edge):
+    path, cost = getPath(CLARKE_SOLUTION.copy(), 0, [], 0)
+    verifier = [False, False]
+    for edge in path:
+        if edge[0] == 0:
+            verifier = [False, False]
+        if edge[1] == new_edge[0]:
+            verifier[0] = True
+        if edge[1] == new_edge[1]:
+            verifier[1] = True
+        if verifier == [True, True]:
+            return True
+    return False
+
+
+def insertEconomies():
+    global ECONOMIES_TUPLES, GRAPH_MATRIX, CLARKE_SOLUTION
+    a = 0
+    for economy in ECONOMIES_TUPLES:
+        (i, j), s = economy
+        if(CLARKE_SOLUTION[i][0] != np.inf and CLARKE_SOLUTION[0][j] != np.inf) and (not verifyCycle((i, j))):
+            a = a + 1
+            CLARKE_SOLUTION[i][0] = np.inf
+            CLARKE_SOLUTION[0][j] = np.inf
+            CLARKE_SOLUTION[i][j] = GRAPH_MATRIX[i][j]
+
+
+def insertSolution():
+    global CLARKE_SOLUTION, SOLUTIONS
+    SOLUTIONS.append(getPath(CLARKE_SOLUTION.copy(), 0, [], 0))
+
 def clarkeWright():
-    global ECONOMIES_DICTS, VISITED, DIMENSION, GRAPH_MATRIX
-    VISITED = []
-    curr_v0 = 0 # start from zero
-    while len(VISITED) < DIMENSION:
-        edge = None 
-        curr_v1 = list(ECONOMIES_DICTS[curr_v0].keys())[0]
-        if GRAPH_MATRIX[curr_v0][curr_v1] != 0:
-            # edge = (curr_v0, curr_v1, ECONOMIES_DICTS[curr_v0][curr_v1])
-            edge = (curr_v0, curr_v1)
-            removeOriginsDestinies(curr_v0, curr_v1)
-            VISITED.append(edge)
-            curr_v0 = curr_v1
-        else:
-            ECONOMIES_DICTS[curr_v0].pop(curr_v1)
-    SOLUTIONS.append((VISITED, calculatePathSize(VISITED)))
+    buildInitialSolution()
+    calculateEconomies()
+    insertEconomies()
+    insertSolution()
 
 
 def _2opt():
@@ -117,8 +142,10 @@ def _2opt():
             new_solution = reference_solution.copy()
             for j in range(n+1, i):
                 new_solution[j] = (new_solution[j][1], new_solution[j][0])
-            new_solution[n] = (reference_solution[n][0], reference_solution[i][0])
-            new_solution[i] = (reference_solution[n][1], reference_solution[i][1])
+            new_solution[n] = (reference_solution[n][0],
+                               reference_solution[i][0])
+            new_solution[i] = (reference_solution[n][1],
+                               reference_solution[i][1])
             SOLUTIONS.append((new_solution, calculatePathSize(new_solution)))
         n += 1
 
@@ -131,20 +158,17 @@ def main():
             for file in f:
                 if r.split('/')[1] in file:
                     try:
-                        # parseFile(r+'/'+file)
-                        parseFile('grafos/atsp/br17.atsp')
-                        calculateMinPathsOneToAll()
-                        calculateEconomies()
+                        initGlobalVariables()
+                        parseFile(r+'/'+file)
+                        # parseFile('grafos/atsp/br17.atsp')
                         clarkeWright()
-                        # print(SOLUTIONS[0])
-                        # print('\n')
+                        print("CLARKE_WRIGHT:",SOLUTIONS[0][1])
                         _2opt()
-                        # ordenar as soluções em ordem crescente de custo e pegar a menor
-                        print(sorted(SOLUTIONS, key=lambda x : x[1])[0])
+                        print("2-OPT:", sorted(SOLUTIONS, key=lambda x: x[1])[0][1])
                     except Exception as e:
                         print(e)
                         PROBLEMS.writelines(file + '\n')
-                    break
+                    # break
     PROBLEMS.close()
 
 
