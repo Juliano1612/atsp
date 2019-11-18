@@ -56,7 +56,8 @@ def parseFile(path):
 
 def buildInitialSolution():
     global CLARKE_SOLUTION, GRAPH_MATRIX
-    CLARKE_SOLUTION = np.full(GRAPH_MATRIX.shape, np.inf)
+    CLARKE_SOLUTION = [9999] * (GRAPH_MATRIX.shape[0] * GRAPH_MATRIX.shape[1])
+    CLARKE_SOLUTION = np.array(CLARKE_SOLUTION).reshape(GRAPH_MATRIX.shape)
     for i in range(len(CLARKE_SOLUTION)):
         if i != 0:
             CLARKE_SOLUTION[0][i] = GRAPH_MATRIX[0][i]
@@ -68,12 +69,10 @@ def calculateEconomies():
     ECONOMIES_TUPLES = []
     for i in range(DIMENSION):
         for j in range(DIMENSION):
-            if i == j or i == 0 or j == 0:
-                continue
-
-            s = GRAPH_MATRIX[0][i] + \
-                GRAPH_MATRIX[0][j] - GRAPH_MATRIX[i][j]
-            ECONOMIES_TUPLES.append(((i, j), s))
+            if i != j and i != 0 and j != 0:
+                s = GRAPH_MATRIX[0][i] + \
+                    GRAPH_MATRIX[0][j] - GRAPH_MATRIX[i][j]
+                ECONOMIES_TUPLES.append(((i, j), s))
     ECONOMIES_TUPLES = sorted(
         ECONOMIES_TUPLES, key=lambda x: x[1], reverse=True)
 
@@ -86,14 +85,14 @@ def calculatePathSize(path):
     return pathSize
 
 
-def getPath(solucao, origem, caminho, soma):
-    for destino in range(len(solucao[origem])):
-        if solucao[origem][destino] != np.inf:
-            caminho.insert(len(caminho), (origem, destino))
-            soma = soma + solucao[origem][destino]
-            solucao[origem][destino] = np.inf
-            return getPath(solucao, destino, caminho, soma)
-    return caminho, soma
+def getPath(solution, origin, path, cost):
+    for destiny in range(len(solution[origin])):
+        if solution[origin][destiny] != 9999:
+            path.insert(len(path), (origin, destiny))
+            cost += solution[origin][destiny]
+            solution[origin][destiny] = 9999
+            return getPath(solution, destiny, path, cost)
+    return path, cost
 
 
 def verifyCycle(new_edge):
@@ -116,10 +115,10 @@ def insertEconomies():
     a = 0
     for economy in ECONOMIES_TUPLES:
         (i, j), s = economy
-        if(CLARKE_SOLUTION[i][0] != np.inf and CLARKE_SOLUTION[0][j] != np.inf) and (not verifyCycle((i, j))):
-            a = a + 1
-            CLARKE_SOLUTION[i][0] = np.inf
-            CLARKE_SOLUTION[0][j] = np.inf
+        if(CLARKE_SOLUTION[i][0] != 9999 and CLARKE_SOLUTION[0][j] != 9999) and (not verifyCycle((i, j))):
+            a += 1
+            CLARKE_SOLUTION[i][0] = 9999
+            CLARKE_SOLUTION[0][j] = 9999
             CLARKE_SOLUTION[i][j] = GRAPH_MATRIX[i][j]
 
 
@@ -156,10 +155,10 @@ def _2opt():
 def plotGraph(graph, file, label, matrix):
     global DIMENSION, GRAPH_MATRIX
     edges = []
-    if(matrix):
+    if matrix:
         for i in range(DIMENSION):
             for j in range(DIMENSION):
-                if(graph[i][j] != np.inf and graph[i][j] != 9999):
+                if graph[i][j] != 9999 and graph[i][j] != 9999 :
                     edges.append((i,j))
     else :
         edges = graph
@@ -174,7 +173,7 @@ def plotGraph(graph, file, label, matrix):
     pos=nx.circular_layout(G)
     nx.draw_networkx_labels(G, pos)
     # nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels)
-    nx.draw(G, pos, node_size=300, edge_color=edge_colors, edge_cmap=plt.cm.Reds)
+    nx.draw(G, pos, node_size=300, node_color='silver', edge_color=edge_colors, edge_cmap=plt.cm.Reds)
     # plt.savefig('graph_images/%s-%s.png' % (file, label))
     plt.show()
 
@@ -206,3 +205,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
