@@ -2,7 +2,30 @@ import numpy as np
 import os
 import networkx as nx
 import matplotlib.pyplot as plt
-# import pylab
+import json
+import time
+
+FILES = [
+    {'file_name':'br17', 'clarke_solutions': [], '2opt_solutions': [], 'best_clarke_solution': {'origin': None, 'solution': {'path': [], 'size': 99999}}, 'best_2opt_solution': {'origin': None, 'solution': {'path': [], 'size': 99999}}},
+    {'file_name':'ft53', 'clarke_solutions': [], '2opt_solutions': [], 'best_clarke_solution': {'origin': None, 'solution': {'path': [], 'size': 99999}}, 'best_2opt_solution': {'origin': None, 'solution': {'path': [], 'size': 99999}}},
+    {'file_name':'ft70', 'clarke_solutions': [], '2opt_solutions': [], 'best_clarke_solution': {'origin': None, 'solution': {'path': [], 'size': 99999}}, 'best_2opt_solution': {'origin': None, 'solution': {'path': [], 'size': 99999}}},
+    {'file_name':'ftv33', 'clarke_solutions': [], '2opt_solutions': [], 'best_clarke_solution': {'origin': None, 'solution': {'path': [], 'size': 99999}}, 'best_2opt_solution': {'origin': None, 'solution': {'path': [], 'size': 99999}}},
+    {'file_name':'ftv35', 'clarke_solutions': [], '2opt_solutions': [], 'best_clarke_solution': {'origin': None, 'solution': {'path': [], 'size': 99999}}, 'best_2opt_solution': {'origin': None, 'solution': {'path': [], 'size': 99999}}},
+    {'file_name':'ftv38', 'clarke_solutions': [], '2opt_solutions': [], 'best_clarke_solution': {'origin': None, 'solution': {'path': [], 'size': 99999}}, 'best_2opt_solution': {'origin': None, 'solution': {'path': [], 'size': 99999}}},
+    {'file_name':'ftv44', 'clarke_solutions': [], '2opt_solutions': [], 'best_clarke_solution': {'origin': None, 'solution': {'path': [], 'size': 99999}}, 'best_2opt_solution': {'origin': None, 'solution': {'path': [], 'size': 99999}}},
+    {'file_name':'ftv47', 'clarke_solutions': [], '2opt_solutions': [], 'best_clarke_solution': {'origin': None, 'solution': {'path': [], 'size': 99999}}, 'best_2opt_solution': {'origin': None, 'solution': {'path': [], 'size': 99999}}},
+    {'file_name':'ftv55', 'clarke_solutions': [], '2opt_solutions': [], 'best_clarke_solution': {'origin': None, 'solution': {'path': [], 'size': 99999}}, 'best_2opt_solution': {'origin': None, 'solution': {'path': [], 'size': 99999}}},
+    {'file_name':'ftv64', 'clarke_solutions': [], '2opt_solutions': [], 'best_clarke_solution': {'origin': None, 'solution': {'path': [], 'size': 99999}}, 'best_2opt_solution': {'origin': None, 'solution': {'path': [], 'size': 99999}}},
+    {'file_name':'ftv70', 'clarke_solutions': [], '2opt_solutions': [], 'best_clarke_solution': {'origin': None, 'solution': {'path': [], 'size': 99999}}, 'best_2opt_solution': {'origin': None, 'solution': {'path': [], 'size': 99999}}},
+    {'file_name':'ftv170', 'clarke_solutions': [], '2opt_solutions': [], 'best_clarke_solution': {'origin': None, 'solution': {'path': [], 'size': 99999}}, 'best_2opt_solution': {'origin': None, 'solution': {'path': [], 'size': 99999}}},
+    {'file_name':'kro124p', 'clarke_solutions': [], '2opt_solutions': [], 'best_clarke_solution': {'origin': None, 'solution': {'path': [], 'size': 99999}}, 'best_2opt_solution': {'origin': None, 'solution': {'path': [], 'size': 99999}}},
+    {'file_name':'p43', 'clarke_solutions': [], '2opt_solutions': [], 'best_clarke_solution': {'origin': None, 'solution': {'path': [], 'size': 99999}}, 'best_2opt_solution': {'origin': None, 'solution': {'path': [], 'size': 99999}}},
+    {'file_name':'rbg323', 'clarke_solutions': [], '2opt_solutions': [], 'best_clarke_solution': {'origin': None, 'solution': {'path': [], 'size': 99999}}, 'best_2opt_solution': {'origin': None, 'solution': {'path': [], 'size': 99999}}},
+    {'file_name':'rbg358', 'clarke_solutions': [], '2opt_solutions': [], 'best_clarke_solution': {'origin': None, 'solution': {'path': [], 'size': 99999}}, 'best_2opt_solution': {'origin': None, 'solution': {'path': [], 'size': 99999}}},
+    {'file_name':'rbg403', 'clarke_solutions': [], '2opt_solutions': [], 'best_clarke_solution': {'origin': None, 'solution': {'path': [], 'size': 99999}}, 'best_2opt_solution': {'origin': None, 'solution': {'path': [], 'size': 99999}}},
+    {'file_name':'rbg443', 'clarke_solutions': [], '2opt_solutions': [], 'best_clarke_solution': {'origin': None, 'solution': {'path': [], 'size': 99999}}, 'best_2opt_solution': {'origin': None, 'solution': {'path': [], 'size': 99999}}},
+    {'file_name':'ry48p', 'clarke_solutions': [], '2opt_solutions': [], 'best_clarke_solution': {'origin': None, 'solution': {'path': [], 'size': 99999}}, 'best_2opt_solution': {'origin': None, 'solution': {'path': [], 'size': 99999}}},
+]
 
 FOLDER = 'grafos'
 EDGE_WEIGHT_TYPE = ''
@@ -14,20 +37,24 @@ PROBLEMS = open('problems.txt', 'w')
 CLARKE_SOLUTION = None
 ECONOMIES_TUPLES = None
 SOLUTIONS = []
+ORIGIN = None
 
 
 def initGlobalVariables():
-    global EDGE_WEIGHT_FORMAT, EDGE_WEIGHT_TYPE, DIMENSION, GRAPH_MATRIX, CLARKE_SOLUTION, ECONOMIES_TUPLES, SOLUTIONS
-    EDGE_WEIGHT_TYPE = ''
-    EDGE_WEIGHT_FORMAT = ''
-    DIMENSION = 0
-    GRAPH_MATRIX = None
+    global  CLARKE_SOLUTION, ECONOMIES_TUPLES, SOLUTIONS, ORIGIN
     ECONOMIES_TUPLES = None
     SOLUTIONS = []
+    ORIGIN = None
+    CLARKE_SOLUTION = None
+    ORIGIN = None
 
 
 def parseFile(path):
     global EDGE_WEIGHT_TYPE, EDGE_WEIGHT_FORMAT, GRAPH_MATRIX, DIMENSION
+    GRAPH_MATRIX = None
+    DIMENSION = 0
+    EDGE_WEIGHT_TYPE = ''
+    EDGE_WEIGHT_FORMAT = ''
     tmp_array = ''
     with open(path) as f:
         for idx, line in enumerate(f.readlines()):
@@ -60,8 +87,8 @@ def buildInitialSolution():
     CLARKE_SOLUTION = np.array(CLARKE_SOLUTION).reshape(GRAPH_MATRIX.shape)
     for i in range(len(CLARKE_SOLUTION)):
         if i != 0:
-            CLARKE_SOLUTION[0][i] = GRAPH_MATRIX[0][i]
-            CLARKE_SOLUTION[i][0] = GRAPH_MATRIX[i][0]
+            CLARKE_SOLUTION[ORIGIN][i] = GRAPH_MATRIX[ORIGIN][i]
+            CLARKE_SOLUTION[i][ORIGIN] = GRAPH_MATRIX[i][ORIGIN]
 
 
 def calculateEconomies():
@@ -69,9 +96,9 @@ def calculateEconomies():
     ECONOMIES_TUPLES = []
     for i in range(DIMENSION):
         for j in range(DIMENSION):
-            if i != j and i != 0 and j != 0:
-                s = GRAPH_MATRIX[0][i] + \
-                    GRAPH_MATRIX[0][j] - GRAPH_MATRIX[i][j]
+            if i != j and i != ORIGIN and j != ORIGIN:
+                s = GRAPH_MATRIX[ORIGIN][i] + \
+                    GRAPH_MATRIX[ORIGIN][j] - GRAPH_MATRIX[i][j]
                 ECONOMIES_TUPLES.append(((i, j), s))
     ECONOMIES_TUPLES = sorted(
         ECONOMIES_TUPLES, key=lambda x: x[1], reverse=True)
@@ -87,7 +114,7 @@ def calculatePathSize(path):
 
 def getPath(solution, origin, path, cost):
     for destiny in range(len(solution[origin])):
-        if solution[origin][destiny] != 9999:
+        if solution[origin][destiny] < 9999:
             path.insert(len(path), (origin, destiny))
             cost += solution[origin][destiny]
             solution[origin][destiny] = 9999
@@ -96,10 +123,10 @@ def getPath(solution, origin, path, cost):
 
 
 def verifyCycle(new_edge):
-    path, cost = getPath(CLARKE_SOLUTION.copy(), 0, [], 0)
+    path, cost = getPath(CLARKE_SOLUTION.copy(), ORIGIN, [], 0)
     verifier = [False, False]
     for edge in path:
-        if edge[0] == 0:
+        if edge[0] == ORIGIN:
             verifier = [False, False]
         if edge[1] == new_edge[0]:
             verifier[0] = True
@@ -112,19 +139,17 @@ def verifyCycle(new_edge):
 
 def insertEconomies():
     global ECONOMIES_TUPLES, GRAPH_MATRIX, CLARKE_SOLUTION
-    a = 0
     for economy in ECONOMIES_TUPLES:
         (i, j), s = economy
-        if(CLARKE_SOLUTION[i][0] != 9999 and CLARKE_SOLUTION[0][j] != 9999) and (not verifyCycle((i, j))):
-            a += 1
-            CLARKE_SOLUTION[i][0] = 9999
-            CLARKE_SOLUTION[0][j] = 9999
+        if(CLARKE_SOLUTION[i][ORIGIN] < 9999 and CLARKE_SOLUTION[ORIGIN][j] < 9999) and (not verifyCycle((i, j))):
+            CLARKE_SOLUTION[i][ORIGIN] = 9999
+            CLARKE_SOLUTION[ORIGIN][j] = 9999
             CLARKE_SOLUTION[i][j] = GRAPH_MATRIX[i][j]
 
 
 def insertSolution():
     global CLARKE_SOLUTION, SOLUTIONS
-    SOLUTIONS.append(getPath(CLARKE_SOLUTION.copy(), 0, [], 0))
+    SOLUTIONS.append(getPath(CLARKE_SOLUTION.copy(), ORIGIN, [], 0))
 
 def clarkeWright():
     buildInitialSolution()
@@ -158,7 +183,7 @@ def plotGraph(graph, file, label, matrix):
     if matrix:
         for i in range(DIMENSION):
             for j in range(DIMENSION):
-                if graph[i][j] != 9999 and graph[i][j] != 9999 :
+                if graph[i][j] < 9999 and graph[i][j] < 9999 :
                     edges.append((i,j))
     else :
         edges = graph
@@ -177,29 +202,71 @@ def plotGraph(graph, file, label, matrix):
     # plt.savefig('graph_images/%s-%s.png' % (file, label))
     plt.show()
 
-def main():
-    global FOLDER, PROBLEMS
-    PROBLEMS.truncate(0)
+def executeToFolder():
+    global FOLDER, PROBLEMS, ORIGIN
     for r, d, f in os.walk(FOLDER):
         if(r != FOLDER and 'atsp' in r):
             for file in f:
                 if r.split('/')[1] in file:
                     try:
                         initGlobalVariables()
+                        ORIGIN = 0
                         parseFile(r+'/'+file)
                         # parseFile('grafos/atsp/br17.atsp')
                         # plotGraph(GRAPH_MATRIX.copy(), file, 'Complete', True)
                         clarkeWright()
-                        print("CLARKE_WRIGHT:",SOLUTIONS[0][1])
-                        plotGraph(CLARKE_SOLUTION.copy(), file, 'ClarkeWright', True)
+                        print("CLARKE_WRIGHT:", SOLUTIONS[0][1])
+                        # plotGraph(CLARKE_SOLUTION.copy(), file, 'ClarkeWright', True)
                         _2opt()
                         _2opt_answer = sorted(SOLUTIONS, key=lambda x: x[1])[0]
                         print("2-OPT:", _2opt_answer[1])
-                        plotGraph(_2opt_answer[0].copy(), file, '2Opt', False)
+                        # plotGraph(_2opt_answer[0].copy(), file, '2Opt', False)
                     except Exception as e:
-                        print(e)
-                        PROBLEMS.writelines(file + '\n')
+                        print(file + ':' + e )
+                        PROBLEMS.writelines(file + ':' + e + '\n')
                     # break
+
+def executeToArray():
+    global FILES, PROBLEMS, ORIGIN, SOLUTIONS
+    for i in range(len(FILES)):
+        try:
+            parseFile('grafos/atsp/%s.atsp' % (FILES[i]['file_name']))
+            for j in range(DIMENSION):
+                initGlobalVariables()
+                SOLUTIONS = []
+                ORIGIN = j
+                print("Testing origin %s" % j)
+                start = time.time()
+                clarkeWright()
+                end = time.time()
+                cw_solution = {'origin': i, 'elapsed_time': end-start, 'solution': {'path': SOLUTIONS[0][0], 'size': int(SOLUTIONS[0][1])}}
+                FILES[i]['clarke_solutions'].append(cw_solution.copy())
+                if(cw_solution['solution']['size'] < FILES[i]['best_clarke_solution']['solution']['size']):
+                    FILES[i]['best_clarke_solution'] = cw_solution.copy()
+                start = time.time()
+                _2opt()
+                end = time.time()
+                _2opt_answer = sorted(SOLUTIONS, key=lambda x: x[1])[0]
+                _2opt_solution = {'origin': i, 'elapsed_time': end-start, 'solution': {'path': _2opt_answer[0], 'size': int(_2opt_answer[1])}}
+                FILES[i]['2opt_solutions'].append(_2opt_solution.copy())
+                if(_2opt_solution['solution']['size'] < FILES[i]['best_2opt_solution']['solution']['size']):
+                    FILES[i]['best_2opt_solution'] = _2opt_solution.copy()
+            print("Best Clarke Solution %d using origin %d" % ( FILES[i]['best_clarke_solution']['solution']['size'], FILES[i]['best_clarke_solution']['origin'],))
+            print("Best 2-OPT Solution %d using origin %d" % ( FILES[i]['best_2opt_solution']['solution']['size'], FILES[i]['best_2opt_solution']['origin'],))
+        except Exception as e:
+            print(FILES[i] + ':' + e )
+            PROBLEMS.writelines(FILES[i] + ':' + e + '\n')
+    with open('results.json', 'w') as results_file:
+        json.dump(FILES, results_file, indent=4)
+
+
+
+
+def main():
+    global PROBLEMS
+    PROBLEMS.truncate(0)
+    executeToFolder()
+    # executeToArray()
     PROBLEMS.close()
 
 
