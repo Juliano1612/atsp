@@ -235,11 +235,11 @@ def executeToArray():
                 initGlobalVariables()
                 SOLUTIONS = []
                 ORIGIN = j
-                print("Testing origin %s" % j)
+                # print("Testing origin %s" % j)
                 start = time.time()
                 clarkeWright()
                 end = time.time()
-                cw_solution = {'origin': i, 'elapsed_time': end-start, 'solution': {'path': SOLUTIONS[0][0], 'size': int(SOLUTIONS[0][1])}}
+                cw_solution = {'origin': ORIGIN, 'elapsed_time': end-start, 'solution': {'path': SOLUTIONS[0][0], 'size': int(SOLUTIONS[0][1])}}
                 FILES[i]['clarke_solutions'].append(cw_solution.copy())
                 if(cw_solution['solution']['size'] < FILES[i]['best_clarke_solution']['solution']['size']):
                     FILES[i]['best_clarke_solution'] = cw_solution.copy()
@@ -247,7 +247,7 @@ def executeToArray():
                 _2opt()
                 end = time.time()
                 _2opt_answer = sorted(SOLUTIONS, key=lambda x: x[1])[0]
-                _2opt_solution = {'origin': i, 'elapsed_time': end-start, 'solution': {'path': _2opt_answer[0], 'size': int(_2opt_answer[1])}}
+                _2opt_solution = {'origin': ORIGIN, 'elapsed_time': end-start, 'solution': {'path': _2opt_answer[0], 'size': int(_2opt_answer[1])}}
                 FILES[i]['2opt_solutions'].append(_2opt_solution.copy())
                 if(_2opt_solution['solution']['size'] < FILES[i]['best_2opt_solution']['solution']['size']):
                     FILES[i]['best_2opt_solution'] = _2opt_solution.copy()
@@ -256,8 +256,8 @@ def executeToArray():
         except Exception as e:
             print(FILES[i] + ':' + e )
             PROBLEMS.writelines(FILES[i] + ':' + e + '\n')
-    with open('results.json', 'w') as results_file:
-        json.dump(FILES, results_file, indent=4)
+        with open('results-' + FILES[i]['file_name'] + '.json', 'w') as results_file:
+            json.dump(FILES[i], results_file, indent=4)
 
 
 
@@ -265,8 +265,8 @@ def executeToArray():
 def main():
     global PROBLEMS
     PROBLEMS.truncate(0)
-    executeToFolder()
-    # executeToArray()
+    # executeToFolder()
+    executeToArray()
     PROBLEMS.close()
 
 
