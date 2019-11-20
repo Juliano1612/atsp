@@ -2,6 +2,7 @@ import numpy as np
 import os
 import networkx as nx
 import matplotlib.pyplot as plt
+import sys
 # import pylab
 
 FOLDER = 'grafos'
@@ -54,24 +55,24 @@ def parseFile(path):
                 tmp_array, dtype=int, sep=' ').reshape((DIMENSION, DIMENSION))
 
 
-def buildInitialSolution():
+def buildInitialSolution(origin):
     global CLARKE_SOLUTION, GRAPH_MATRIX
     CLARKE_SOLUTION = [9999] * (GRAPH_MATRIX.shape[0] * GRAPH_MATRIX.shape[1])
     CLARKE_SOLUTION = np.array(CLARKE_SOLUTION).reshape(GRAPH_MATRIX.shape)
     for i in range(len(CLARKE_SOLUTION)):
-        if i != 0:
-            CLARKE_SOLUTION[0][i] = GRAPH_MATRIX[0][i]
-            CLARKE_SOLUTION[i][0] = GRAPH_MATRIX[i][0]
+        if i != origin:
+            CLARKE_SOLUTION[origin][i] = GRAPH_MATRIX[origin][i]
+            CLARKE_SOLUTION[i][origin] = GRAPH_MATRIX[i][origin]
 
 
-def calculateEconomies():
+def calculateEconomies(origin):
     global GRAPH_MATRIX, ECONOMIES_TUPLES, DIMENSION
     ECONOMIES_TUPLES = []
     for i in range(DIMENSION):
         for j in range(DIMENSION):
-            if i != j and i != 0 and j != 0:
-                s = GRAPH_MATRIX[0][i] + \
-                    GRAPH_MATRIX[0][j] - GRAPH_MATRIX[i][j]
+            if i != j and i != origin and j != origin:
+                s = GRAPH_MATRIX[origin][i] + \
+                    GRAPH_MATRIX[origin][j] - GRAPH_MATRIX[i][j]
                 ECONOMIES_TUPLES.append(((i, j), s))
     ECONOMIES_TUPLES = sorted(
         ECONOMIES_TUPLES, key=lambda x: x[1], reverse=True)
@@ -95,11 +96,11 @@ def getPath(solution, origin, path, cost):
     return path, cost
 
 
-def verifyCycle(new_edge):
-    path, cost = getPath(CLARKE_SOLUTION.copy(), 0, [], 0)
+def verifyCycle(origin, new_edge):
+    path, cost = getPath(CLARKE_SOLUTION.copy(), origin, [], 0)
     verifier = [False, False]
     for edge in path:
-        if edge[0] == 0:
+        if edge[0] == origin:
             verifier = [False, False]
         if edge[1] == new_edge[0]:
             verifier[0] = True
@@ -110,27 +111,27 @@ def verifyCycle(new_edge):
     return False
 
 
-def insertEconomies():
+def insertEconomies(origin):
     global ECONOMIES_TUPLES, GRAPH_MATRIX, CLARKE_SOLUTION
     a = 0
     for economy in ECONOMIES_TUPLES:
         (i, j), s = economy
-        if(CLARKE_SOLUTION[i][0] != 9999 and CLARKE_SOLUTION[0][j] != 9999) and (not verifyCycle((i, j))):
+        if(CLARKE_SOLUTION[i][origin] != 9999 and CLARKE_SOLUTION[origin][j] != 9999) and (not verifyCycle(origin, (i, j))):
             a += 1
-            CLARKE_SOLUTION[i][0] = 9999
-            CLARKE_SOLUTION[0][j] = 9999
+            CLARKE_SOLUTION[i][origin] = 9999
+            CLARKE_SOLUTION[origin][j] = 9999
             CLARKE_SOLUTION[i][j] = GRAPH_MATRIX[i][j]
 
 
-def insertSolution():
+def insertSolution(origin):
     global CLARKE_SOLUTION, SOLUTIONS
-    SOLUTIONS.append(getPath(CLARKE_SOLUTION.copy(), 0, [], 0))
+    SOLUTIONS.append(getPath(CLARKE_SOLUTION.copy(), origin, [], 0))
 
-def clarkeWright():
-    buildInitialSolution()
-    calculateEconomies()
-    insertEconomies()
-    insertSolution()
+def clarkeWright(origin):
+    buildInitialSolution(origin)
+    calculateEconomies(origin)
+    insertEconomies(origin)
+    insertSolution(origin)
 
 
 def _2opt():
@@ -178,29 +179,18 @@ def plotGraph(graph, file, label, matrix):
     plt.show()
 
 def main():
-    global FOLDER, PROBLEMS
-    PROBLEMS.truncate(0)
-    for r, d, f in os.walk(FOLDER):
-        if(r != FOLDER and 'atsp' in r):
-            for file in f:
-                if r.split('/')[1] in file:
-                    try:
-                        initGlobalVariables()
-                        parseFile(r+'/'+file)
-                        # parseFile('grafos/atsp/br17.atsp')
-                        # plotGraph(GRAPH_MATRIX.copy(), file, 'Complete', True)
-                        clarkeWright()
-                        print("CLARKE_WRIGHT:",SOLUTIONS[0][1])
-                        plotGraph(CLARKE_SOLUTION.copy(), file, 'ClarkeWright', True)
-                        _2opt()
-                        _2opt_answer = sorted(SOLUTIONS, key=lambda x: x[1])[0]
-                        print("2-OPT:", _2opt_answer[1])
-                        plotGraph(_2opt_answer[0].copy(), file, '2Opt', False)
-                    except Exception as e:
-                        print(e)
-                        PROBLEMS.writelines(file + '\n')
-                    # break
-    PROBLEMS.close()
+    try:
+        initGlobalVariables()
+        parseFile('grafos/atsp/' + sys.argv[1] + '.atsp')
+        clarkeWright(int(sys.argv[2]))
+        print("CLARKE_WRIGHT:", SOLUTIONS[0][1])
+        plotGraph(CLARKE_SOLUTION.copy(), sys.argv[1], 'ClarkeWright', True)
+        _2opt()
+        _2opt_answer = sorted(SOLUTIONS, key=lambda x: x[1])[0]
+        print("2-OPT:", _2opt_answer[1])
+        plotGraph(_2opt_answer[0].copy(), sys.argv[1], '2Opt', False)
+    except Exception as e:
+        print(e)
 
 
 if __name__ == "__main__":
